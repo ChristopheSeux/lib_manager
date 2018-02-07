@@ -1,7 +1,7 @@
 import sys
 import bpy,os
 import json
-from os.path import join,dirname,realpath,basename
+from os.path import join,dirname,realpath,basename,normpath,splitdrive
 
 from pipe.utils import read_json
 from pipe.display import set_display
@@ -35,7 +35,19 @@ viewports[-1][0].spaces[0].region_3d.view_perspective = 'CAMERA'
 
 set_display('solid')
 
+sensor = scene.camera.data.sensor_width
+
 for f in files :
+    print(normpath(f),normpath(settings['root']))
+
+    root = splitdrive(normpath(settings['root']))[1]
+    path = splitdrive(normpath(f))[1]
+
+    print(root,path)
+    short_path = path.replace(root,'')[1:]
+
+    print(short_path)
+
     with bpy.data.libraries.load(f, link=True) as (data_src, data_dst):
         data_dst.groups = data_src.groups
 
@@ -49,7 +61,8 @@ for f in files :
         empty.select = True
 
         bpy.ops.view3d.camera_to_view_selected(override)
-        scene.camera.location[1] -=0.4
+        #scene.camera.location[1] -=0.4
+        scene.camera.data.sensor_width *=1.1
 
         if len(data_dst.groups)> 1 :
             asset_folder = join(lib_path,basename(folder),basename(f).split('_')[0],g.name)
@@ -66,7 +79,7 @@ for f in files :
             "image" : "./%s.png"%(g.name+"_image"),
             "icon" : "./%s.png"%(g.name+"_icon"),
             "tags" : "",
-            "path": f,
+            "path": short_path,
             "description" : ""
                     }
 
@@ -92,7 +105,7 @@ for f in files :
         bpy.data.objects.remove(empty,True)
         bpy.data.groups.remove(g,True)
 
-
+        scene.camera.data.sensor_width = sensor
 
 
 

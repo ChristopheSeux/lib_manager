@@ -80,8 +80,9 @@ def store_acting(self):
     write_anim(path,self.assetName.text(),action)
 
     asset_info={
+        "asset" : self.assetName.text(),
         "type" : "acting",
-        "image_path" : "./%s.jpg"%(self.assetName.text()+'_thumbnail'),
+        "image" : "./%s.jpg"%(self.assetName.text()+'_thumbnail'),
         "tags" : self.assetTags.text(),
         "path":"./%s.txt"%(self.assetName.text()+'_action'),
         "description" : self.assetDescription.toPlainText()

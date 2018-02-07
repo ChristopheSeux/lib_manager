@@ -108,12 +108,11 @@ def read_anim(action,blend,left,right,selected_only,mirror,frame_current):
 
                         if dstChannelStr:
                             #  KEYFRAME CREATION
-                            if bpy.context.scene.tool_settings.use_keyframe_insert_auto and not exclude_fc :
+                            if not exclude_fc :
                                 if not ob.animation_data:
                                     ob.animation_data_create()
 
                                 if not ob.animation_data.action :
-                                    name = ob.proxy_group.dupli_group.name + '_proxy'
                                     action = bpy.data.actions.new(ob.name)
                                     ob.animation_data.action = action
 

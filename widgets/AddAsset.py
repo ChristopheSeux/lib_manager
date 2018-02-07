@@ -136,7 +136,7 @@ class AddAsset(QVBoxLayout) :
 
         self.toolsLayout.addWidget(self.btn_thumbnail)
         self.toolsLayout.addWidget(self.btn_ok)
-        self.toolsLayout.addWidget(self.btn_cancel)
+        #self.toolsLayout.addWidget(self.btn_cancel)
 
 
         self.mainLayout.addItem(verticalSpacer)

@@ -18,7 +18,11 @@ def load_group(self,ThumbnailList,item_info,link=True):
     #print('#####')
 
     if re.search('[\d][\d][\d]',basename(item_info['path'])) :
-        blend_path = get_versions(item_info['path'])[-1]
+        versions = get_versions(item_info['path'])
+        if not versions :
+            print('Asset no longer exist')
+            return
+        blend_path = versions[-1]
 
     else :
         blend_path = item_info['path']

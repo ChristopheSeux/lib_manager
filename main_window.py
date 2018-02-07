@@ -11,6 +11,8 @@ from PyQt5.QtGui import QIcon,QKeySequence,QPixmap
 from .functions import *
 from .widgets import *
 
+from os.path import join,dirname,normpath
+
 working_dir = os.path.dirname(os.path.realpath(__file__))
 settings = read_json(os.path.join(working_dir,"settings.json"))
 
@@ -27,6 +29,7 @@ class MainWindow(QWidget):
         self.widget_close = None
         #self.view_mode = None
         self.context = None
+        self.thumbnailList = None
 
         #self.folders = folder
 
@@ -152,6 +155,7 @@ class MainWindow(QWidget):
         self.outlinerTopBarLayout.setContentsMargins(0, 0, 0, 0)
 
         self.treeWidget = TreeWidget()
+        self.treeWidget.create_widget(settings['path'])
         self.treeWidget.itemClicked.connect(self.click_item)
 
 
@@ -192,12 +196,15 @@ class MainWindow(QWidget):
         self.middleLayout.setContentsMargins(0, 0, 0, 0)
         self.middleLayout.setSpacing(0)
 
+        self.thumbnailList = ListWidget(self)
         self.assetLayout = QVBoxLayout()
         self.assetLayout.setContentsMargins(0, 0, 0, 0)
 
-        vSpacer = QSpacerItem(20, 10, QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.assetLayout.addItem(vSpacer)
-        #self.thumbnailList = ThumbnailList(self)
+        self.assetLayout.addWidget(self.thumbnailList)
+
+        #vSpacer = QSpacerItem(20, 10, QSizePolicy.Expanding, QSizePolicy.Expanding)
+        #self.assetLayout.addItem(vSpacer)
+
         #self.change_view_mode()
         #self.thumbnailList.itemClicked.connect(self.click_thumb)
         #self.thumbnailList = TableWidget(self)
@@ -318,11 +325,14 @@ class MainWindow(QWidget):
         area = str(self.area.currentText())
 
         if self.treeWidget and self.area and self.cbox_filter:
+            if self.treeWidget.search_json.isRunning :
+                self.treeWidget.search_json.terminate()
             self.treeWidget.clear()
 
         #filter_items = str(self.cbox_filter.currentText())
 
-        self.treeWidget.create_tree(settings['path'],'Library','All')
+        self.treeWidget.create_widget(settings['path'])
+        #self.treeWidget.create_tree(settings['path'],'Library','All')
 
 
     def open_folder(self) :
@@ -358,9 +368,10 @@ class MainWindow(QWidget):
     # When selected of folder in the outliner
     def click_item(self,item):
         #for row in range(self.thumbnailList.rowCount()) :
-        clear_layout(self.assetLayout)
+        #clear_layout(self.assetLayout)
         #self.thumbnailList.clear()
         #a= TreeWidget(item.text(1))
+        #self.thumbnailList.clear()
         #self.middle.addWidget(ThumbnailPanel.createWidget(item.text(1)))
         if hasattr(self,'view_mode') and self.view_mode.isChecked() :
             self.thumbnailList = TableWidget(self)
@@ -368,166 +379,53 @@ class MainWindow(QWidget):
             #self.thumbnailList.cellClicked.connect(self.click_thumb)
             #self.thumbnailList.setRowCount(0)
         else :
-            self.thumbnailList = ListWidget(self)
+            if hasattr(self.thumbnailList,"search_asset") and self.thumbnailList.search_asset.isRunning :
+                self.thumbnailList.search_asset.terminate()
+                self.thumbnailList.clear()
+
+            self.thumbnailList.search_images(item.full_path)
             #self.thumbnailList.itemClicked.connect(self.click_thumb)
             #self.thumbnailList.clear()
 
 
         #print(item.full_path)
 
-        self.asset_list = []
-        asset_index = 0
-        for root, dirs, files in os.walk(item.full_path) :
-            for f in files :
-                item_name,item_extension = os.path.splitext(f)
-                item_path = os.path.join(root,f)
 
-                if item_extension == '.json' :
-                    item_info = read_asset(item_path)
-
-                    if item_info.get('image') and os.path.exists(item_info['image']):
-                        image = item_info['image']
-                    else :  #Use default icon
-                        image = self.asset_type[item_info['type']]['image']
-
-                    item_info['image'] = image
-                    item_info['info_path'] = item_path
-
-                    self.asset_list.append(item_info)
-
-                    if hasattr(self,'view_mode') and self.view_mode.isChecked() :
-                        self.thumbnailList.set_row(item_info,asset_index)
-                        #print('list_view')
-                    else :
-                        self.thumbnailList.set_item(item_info,asset_index)
-
-                    asset_index +=1
 
         #self.asset_list.sort(key = lambda x : x[''])
 
-        self.assetLayout.addWidget(self.thumbnailList)
+        #self.assetLayout.addWidget(self.thumbnailList)
 
         if self.area.currentText()== 'Library' :
             subFolder = []
 
-    '''
-    # display information when clicking on a thumbnail
-    def click_thumb(self,item) :
-        clear_layout(self.rightLayout)
-
-        if type(item) == int :
-            item_info = {}
-            for j in range(self.thumbnailList.columnCount()):
-                item_info[self.thumbnailList.horizontalHeaderItem(j).text()] = self.thumbnailList.item(item,j).text()
-
-            print( item_info)
-
-        else :
-            item_info = item.info
-
-        img = QPixmap(item_info['image'])
-        ratio = img.width()/img.height()
-
-        #Preview Image
-        self.previewImage = Image(img = item_info['image'])
-        self.previewImage.setFixedHeight(self.rightPanel.width()*ratio)
-
-        #set text
-        self.textLayout = QVBoxLayout()
-        self.textLayout.setContentsMargins(8, 8, 8, 8)
-        self.textLayout.setSpacing(5)
-
-        #self.textPanel.setLayout(self.textLayout)
-        #Fill layout
-        #Text description
-
-        # Asset Name
-        self.assetName = LineEdit(text=os.path.splitext(item_info['asset'])[0])
-
-        self.assetNameLayout = QHBoxLayout()
-        self.assetNameLayout.addWidget(Label(text = 'Name :'))
-        self.assetNameLayout.addWidget(self.assetName)
-
-        # asset tag
-        self.assetTag = LineEdit(text=item_info['tags'])
-        self.assetTag.textChanged.connect(lambda : self.text_edited(item_info,'tags',self.assetTag.text()))
-        self.assetTagLayout = QHBoxLayout()
-        self.assetTagLayout.addWidget(Label(text = 'Tags :'))
-        self.assetTagLayout.addWidget(self.assetTag)
-
-        # asset type
-        self.assetType = LineEdit(text=item_info['type'])
-        self.assetTypeLayout = QHBoxLayout()
-        self.assetTypeLayout.addWidget(Label(text = 'Type :'))
-        self.assetTypeLayout.addWidget(self.assetType)
-
-        # Description
-        self.assetDescription = QPlainTextEdit()
-        self.assetDescription.textChanged.connect(lambda : self.text_edited(item_info,'description',self.assetDescription.toPlainText()))
-        self.assetDescription.setPlainText(item_info['description'])
-        self.assetDescription.setStyleSheet(get_css('LineEdit'))
-        #self.assetDescription.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.assetDescriptionLayout = QVBoxLayout()
-        self.assetDescriptionLayout.addWidget(Label(text = 'Description :'))
-        self.assetDescriptionLayout.addWidget(self.assetDescription)
-
-        vSpacer1 = QSpacerItem(20, 10, QSizePolicy.Fixed, QSizePolicy.Fixed)
-
-        # Fill Text Layout
-        self.textLayout.addLayout(self.assetNameLayout)
-        self.textLayout.addLayout(self.assetTagLayout)
-        self.textLayout.addLayout(self.assetTypeLayout)
-        self.textLayout.addItem(vSpacer1)
-        self.textLayout.addLayout(self.assetDescriptionLayout)
-
-
-
-        vSpacer2 = QSpacerItem(20, 80, QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-
-        self.rightLayout.addWidget(self.previewImage)
-        self.rightLayout.addLayout(self.textLayout)
-        self.rightLayout.addItem(vSpacer2)
-        
-
-    def text_edited(self,info,key,text):
-        info[key] = text
-
-        with open(info['info_path'], 'r') as f:
-            data = json.load(f)
-            data[key] = text
-
-        with open(info['info_path'], 'w') as outfile:
-            json.dump(data, outfile)
-        '''
     # When taping in the search bar
     def filterThumbnail(self) :
-        #items = (self.thumbnailList.item(i) for i in range(self.thumbnailList.count()))
-        search = self.search_bar.text().lower()
-        keywords = [word.lower() for word in search.split(' ') if len(word)]
+        if self.thumbnailList :
+            items = (self.thumbnailList.item(i) for i in range(self.thumbnailList.count()))
+            search = self.search_bar.text()
 
-        for index,info in enumerate(self.asset_list) :
-            tags = [tag.lower() for tag in info['tags'].split(',') if len(tag)]
-            name = info['name'].lower()
+            for index,item in enumerate(items) :
+                info = item.info
+                tags = [t for t in info['tags'].split(',') if len(info['tags'])]
+                name = info['asset']
 
-            search_list = tags +[name]
+                item_visibility = filtering_keyword(name,search,tags)
 
-            state = False
-            for t in keywords :
-                #if not t in w.text().lower() :
-                if not [k for k in search_list if t in k] :
-                    state = True
+                if self.view_mode.isChecked() :
+                    self.thumbnailList.setRowHidden(index,item_visibility)
                 else :
-                    state = False
-                    break
-
-            if self.view_mode.isChecked() :
-                self.thumbnailList.setRowHidden(index,state)
-            else :
-                self.thumbnailList.item(index).setHidden(state)
+                    self.thumbnailList.item(index).setHidden(item_visibility)
 
 
     def closeEvent(self, event):
+        if self.treeWidget.search_json.isRunning :
+            self.treeWidget.search_json.terminate()
+
+
+        if hasattr(self.thumbnailList,"search_asset") and self.thumbnailList.search_asset.isRunning :
+            self.thumbnailList.search_asset.terminate()
+
         self.widget_close = True
         self.deleteLater()
 

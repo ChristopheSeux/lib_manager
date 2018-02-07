@@ -1,11 +1,32 @@
 import os
-from os.path import dirname,realpath,join,basename,abspath,splitext
+from os.path import dirname,realpath,join,basename,abspath,splitext,normpath
 import xml.etree.ElementTree as ET
 import json
 import subprocess
 import re
 
 working_dir = dirname(dirname(realpath(__file__)))
+#settings = read_json(join(working_dir,"settings.json"))
+
+def filtering_keyword(name,search,tags=[]) :
+    search = search.lower()
+    keywords = [word.lower() for word in search.split(' ') if len(word)]
+
+    tags = [t.lower() for t in tags]
+    name = name.lower()
+
+    search_list = tags +[name]
+
+    state = False
+    for t in keywords :
+        #if not t in w.text().lower() :
+        if not [k for k in search_list if t in k] :
+            return True
+        else :
+            return  False
+
+    return False
+
 
 
 def up_dir(filepath,level) :
@@ -136,6 +157,7 @@ def get_latest_asset(path,depth=2):
 
 
 def read_asset(filepath) :
+    settings = read_json(os.path.join(working_dir,"settings.json"))
     jsonFile = filepath
     if os.path.exists(jsonFile):
         with open(jsonFile) as data_file:
@@ -158,8 +180,16 @@ def read_asset(filepath) :
             if versions :
                 asset_info['path'] = os.path.normpath(versions[-1])
                 """
-    if not os.path.isabs(asset_info['path']) :
+    if asset_info['path'].startswith('.') :
         asset_info['path'] = os.path.normpath(os.path.abspath(asset_info['path']))
+
+    else :
+        asset_info['path'] = join(normpath(settings['root']),normpath(asset_info['path']))
+
+    #print('### PATH')
+    #print(asset_info['path'])
+    #print('###')
+
     asset_info['info_path'] = jsonFile
     #print(asset_info)
     return (asset_info)

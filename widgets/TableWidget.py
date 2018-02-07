@@ -82,10 +82,10 @@ class TableWidget(QTableWidget):
     def on_context_menu(self, QPos):
         self.listMenu= QMenu()
         link = QAction(QIcon(icon_path('ICON_LINK_BLEND')), 'Link', self)
-        link.triggered.connect(self.menu_item_link)
+        link.triggered.connect(lambda : self.menu_item_link(link=True))
 
         append = QAction(QIcon(icon_path('ICON_APPEND_BLEND')), 'Append', self)
-        append.triggered.connect(self.menu_item_append)
+        append.triggered.connect(lambda : self.menu_item_link(link=False))
 
         delete = QAction(QIcon(icon_path('ICON_CLOSE')), 'Delete', self)
         delete.triggered.connect(self.menu_item_delete)
@@ -98,9 +98,9 @@ class TableWidget(QTableWidget):
         self.listMenu.move(parentPosition + QPos)
         self.listMenu.show()
 
-    def menu_item_link(self) :
-        #from .. import asset_loading
-        asset_list = self.parent.asset_list
+    def menu_item_link(self,link = True) :
+
+
         asset_type = self.parent.asset_type
         selected_rows = [i.row() for i in self.selectionModel().selectedRows()]
 
@@ -120,25 +120,12 @@ class TableWidget(QTableWidget):
             load_func = asset_type[asset_info['type']]['load']
 
             module = getattr(asset_managing,asset_info['type'])
-            getattr(module,load_func)(self.parent,self,asset_info)
+            getattr(module,load_func)(self.parent,self,asset_info,link=link)
 
             self.offset +=1
 
-    def menu_item_append(self) :
-        #from .. import asset_loading
-        asset_list = self.parent.asset_list
-        asset_type = self.parent.asset_type
-        selected_rows = [i.row() for i in self.selectionModel().selectedRows()]
-        self.offset = 0
-        #self.scene = bpy.context.scene
-        for index in selected_rows:
-            from .. import asset_managing as asset_managing
-            load_func = asset_type[asset_list[index]['type']]['load']
+        bpy.ops.ed.undo_push()
 
-            module = getattr(asset_managing,asset_list[index]['type'])
-            getattr(module,load_func)(self.parent,self,asset_list[index])
-
-            self.offset +=1
 
     def menu_item_delete(self) :
         #self.parent.treeWidget.clear()
